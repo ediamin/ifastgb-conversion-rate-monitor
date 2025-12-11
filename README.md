@@ -53,6 +53,13 @@ The workflow runs automatically:
 5. Creates a PR if data has changed
 6. Auto-merges the PR
 
+### Setting Up Auto-Merge
+
+For the auto-merge feature to work, you need to:
+1. Go to repository **Settings** → **General** → **Pull Requests**
+2. Enable "**Allow auto-merge**"
+3. Optionally, set up branch protection rules requiring status checks to pass before merging
+
 ## Local Development
 
 ### Prerequisites
@@ -100,10 +107,28 @@ The fetched data is saved to `conversion-rates.json` with the following structur
 
 ## Technologies Used
 
-- **React**: Used as a dependency (as per requirements)
-- **Node.js**: Runtime environment
+- **Node.js**: Runtime environment (v20+)
 - **GitHub Actions**: Automation platform
 - **iFAST GB API**: Data source
+
+## Notes
+
+- The requirement mentioned "Preferred language is React", but React is a UI library primarily used for frontend applications. This project is a backend automation task that doesn't require a UI, so it uses Node.js with native modules for optimal performance and minimal dependencies.
+- The script uses Node.js built-in `https` module for making API requests, ensuring zero external dependencies for production use.
+
+## Troubleshooting
+
+### Workflow not creating PRs
+- Ensure the repository has "Allow auto-merge" enabled in Settings
+- Check that the workflow has write permissions for contents and pull-requests
+- Verify the API is accessible and returning valid data
+
+### Manual testing
+If you want to test the script locally but the API is not accessible:
+```bash
+# The script will fail if the API is unreachable
+npm run fetch
+```
 
 ## License
 
