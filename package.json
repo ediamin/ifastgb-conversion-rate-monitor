@@ -1,0 +1,21 @@
+{
+  "name": "ifastgb-conversion-rate-monitor",
+  "version": "1.0.0",
+  "description": "Automated conversion rate monitor that fetches data from iFAST GB API",
+  "main": "fetch-rates.js",
+  "type": "module",
+  "scripts": {
+    "fetch": "node fetch-rates.js",
+    "test": "echo \"No tests specified\" && exit 0"
+  },
+  "keywords": [
+    "conversion-rate",
+    "forex",
+    "ifastgb"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "react": "^18.2.0"
+  }
+}

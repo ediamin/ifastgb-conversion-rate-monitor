@@ -1,0 +1,99 @@
+name: Fetch Conversion Rates
+
+on:
+  # Run automatically every day at 00:00 UTC
+  schedule:
+    - cron: '0 0 * * *'
+  
+  # Allow manual trigger
+  workflow_dispatch:
+    inputs:
+      baseCurrency:
+        description: 'Base Currency (default: USD)'
+        required: false
+        default: 'USD'
+      termCurrency:
+        description: 'Term Currency (default: BDT)'
+        required: false
+        default: 'BDT'
+
+jobs:
+  fetch-and-update:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: write
+      pull-requests: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Install dependencies
+        run: npm install
+      
+      - name: Fetch conversion rates
+        env:
+          BASE_CURRENCY: ${{ github.event.inputs.baseCurrency || 'USD' }}
+          TERM_CURRENCY: ${{ github.event.inputs.termCurrency || 'BDT' }}
+        run: npm run fetch
+      
+      - name: Check for changes
+        id: git-check
+        run: |
+          git diff --exit-code conversion-rates.json || echo "changed=true" >> $GITHUB_OUTPUT
+      
+      - name: Create Pull Request
+        if: steps.git-check.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "Update conversion rates - ${{ github.event.inputs.baseCurrency || 'USD' }} to ${{ github.event.inputs.termCurrency || 'BDT' }}"
+          title: "Update conversion rates - ${{ github.event.inputs.baseCurrency || 'USD' }} to ${{ github.event.inputs.termCurrency || 'BDT' }}"
+          body: |
+            ## Automated Conversion Rate Update
+            
+            This PR updates the conversion rates data fetched from the iFAST GB API.
+            
+            - **Base Currency**: ${{ github.event.inputs.baseCurrency || 'USD' }}
+            - **Term Currency**: ${{ github.event.inputs.termCurrency || 'BDT' }}
+            - **Timestamp**: ${{ github.event.repository.updated_at }}
+            
+            ### Changes
+            - Updated `conversion-rates.json` with latest rates
+            
+            This PR will be automatically merged if all checks pass.
+          branch: update-conversion-rates-${{ github.run_number }}
+          delete-branch: true
+          labels: |
+            automated
+            conversion-rates
+      
+      - name: Enable Pull Request Automerge
+        if: steps.git-check.outputs.changed == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Wait a moment for PR to be created
+          sleep 5
+          
+          # Get the PR number
+          PR_NUMBER=$(gh pr list --head update-conversion-rates-${{ github.run_number }} --json number --jq '.[0].number')
+          
+          if [ -n "$PR_NUMBER" ]; then
+            echo "Enabling auto-merge for PR #$PR_NUMBER"
+            gh pr merge $PR_NUMBER --auto --merge --delete-branch
+          else
+            echo "No PR found to auto-merge"
+          fi
+      
+      - name: No changes detected
+        if: steps.git-check.outputs.changed != 'true'
+        run: echo "No changes in conversion rates - skipping PR creation"
