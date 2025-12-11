@@ -64,7 +64,7 @@ jobs:
             
             - **Base Currency**: ${{ github.event.inputs.baseCurrency || 'USD' }}
             - **Term Currency**: ${{ github.event.inputs.termCurrency || 'BDT' }}
-            - **Timestamp**: ${{ github.event.repository.updated_at }}
+            - **Workflow Run**: ${{ github.run_number }}
             
             ### Changes
             - Updated `conversion-rates.json` with latest rates

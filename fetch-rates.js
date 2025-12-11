@@ -27,8 +27,8 @@ function fetchData(url) {
     https.get(url, (res) => {
       let data = '';
       
-      // Check status code
-      if (res.statusCode !== 200) {
+      // Check status code (accept all 2xx status codes)
+      if (res.statusCode < 200 || res.statusCode >= 300) {
         reject(new Error(`HTTP error! status: ${res.statusCode}`));
         return;
       }
