@@ -1,0 +1,5 @@
+{
+  "baseCurrency": "USD",
+  "termCurrency": "BDT",
+  "apiUrl": "https://www.ifastgb.com/api/fx/landing-scb-ezr-fx-rates"
+}
