@@ -20,8 +20,16 @@ echo "Fetching conversion rates for ${BASE_CURRENCY} to ${TERM_CURRENCY}..."
 # Construct API URL with parameters
 FULL_URL="${API_URL}?baseCurrency=${BASE_CURRENCY}&termCurrency=${TERM_CURRENCY}"
 
-# Fetch data from API
-RESPONSE=$(curl -s -w "\n%{http_code}" "$FULL_URL")
+# Fetch data from API using curl with proper error handling
+RESPONSE=$(curl -s -f -w "\n%{http_code}" "$FULL_URL" 2>&1)
+CURL_EXIT_CODE=$?
+
+# Check if curl command failed
+if [ $CURL_EXIT_CODE -ne 0 ]; then
+  echo "✗ Error: Network request failed (curl exit code: $CURL_EXIT_CODE)"
+  exit 1
+fi
+
 HTTP_CODE=$(echo "$RESPONSE" | tail -n 1)
 BODY=$(echo "$RESPONSE" | sed '$d')
 
@@ -32,9 +40,10 @@ if [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 300 ]; then
 fi
 
 # Extract normalRate from JSON response using jq
-NORMAL_RATE=$(echo "$BODY" | jq -r '.normalRate // .rate // "N/A"')
+# The API is expected to return a JSON object with a 'normalRate' field
+NORMAL_RATE=$(echo "$BODY" | jq -r '.normalRate // empty')
 
-if [ "$NORMAL_RATE" = "null" ] || [ "$NORMAL_RATE" = "N/A" ]; then
+if [ -z "$NORMAL_RATE" ] || [ "$NORMAL_RATE" = "null" ]; then
   echo "✗ Error: Could not extract normalRate from response"
   echo "Response: $BODY"
   exit 1
