@@ -1,14 +1,15 @@
 # iFAST GB Conversion Rate Monitor
 
-An automated system that fetches foreign exchange conversion rates from the iFAST GB API and saves them to a file. The system runs automatically via GitHub Actions and creates pull requests with the updated data.
+An automated system that fetches foreign exchange conversion rates from the iFAST GB API and saves them to CSV files. The system runs automatically via GitHub Actions and creates pull requests with the updated data.
 
 ## Features
 
-- 🔄 Automated daily fetching of conversion rates
+- 🔄 Automated fetching every 30 minutes
 - ⚙️ Configurable base and term currencies
 - 🤖 Automatic PR creation and merging
-- 🕒 Manual trigger with custom currencies
-- 📊 Historical data tracking via git commits
+- 📊 CSV format for easy data analysis
+- 📅 Monthly data files (one file per month)
+- 📈 Historical data accumulation (append-only)
 
 ## Configuration
 
@@ -18,8 +19,7 @@ The default configuration is stored in `config.json`:
 {
   "baseCurrency": "USD",
   "termCurrency": "BDT",
-  "apiUrl": "https://www.ifastgb.com/api/fx/landing-scb-ezr-fx-rates",
-  "outputFile": "conversion-rates.json"
+  "apiUrl": "https://www.ifastgb.com/api/fx/landing-scb-ezr-fx-rates"
 }
 ```
 
@@ -42,16 +42,15 @@ Go to the "Actions" tab in GitHub, select "Fetch Conversion Rates" workflow, and
 ## GitHub Actions Workflow
 
 The workflow runs automatically:
-- **Schedule**: Daily at 00:00 UTC
+- **Schedule**: Every 30 minutes
 - **Manual**: Can be triggered anytime from the Actions tab
 
 ### Workflow Steps:
 1. Checks out the repository
-2. Sets up Node.js environment
-3. Installs dependencies
-4. Fetches conversion rates from the API
-5. Creates a PR if data has changed
-6. Auto-merges the PR
+2. Fetches conversion rates from the API using shell script
+3. Appends data to the monthly CSV file
+4. Creates a PR if data has changed
+5. Auto-merges the PR
 
 ### Setting Up Auto-Merge
 
@@ -63,38 +62,40 @@ For the auto-merge feature to work, you need to:
 ## Local Development
 
 ### Prerequisites
-- Node.js 20 or higher
-
-### Installation
-```bash
-npm install
-```
+- Bash shell
+- curl
+- jq (JSON processor)
 
 ### Fetch Rates Manually
 ```bash
-npm run fetch
+bash fetch-rates.sh
 ```
 
 ### With Custom Currencies
 ```bash
-BASE_CURRENCY=EUR TERM_CURRENCY=GBP npm run fetch
+BASE_CURRENCY=EUR TERM_CURRENCY=GBP bash fetch-rates.sh
 ```
 
-## Output
+## Data Storage
 
-The fetched data is saved to `conversion-rates.json` with the following structure:
+### CSV Format
+The data is stored in CSV files with the following columns:
+- `datetime`: ISO 8601 timestamp (UTC)
+- `baseCurrency`: Base currency code (e.g., USD)
+- `termCurrency`: Term currency code (e.g., BDT)
+- `normalRate`: Exchange rate
 
-```json
-{
-  "fetchedAt": "2025-12-11T16:54:42.642Z",
-  "baseCurrency": "USD",
-  "termCurrency": "BDT",
-  "apiUrl": "https://www.ifastgb.com/api/fx/landing-scb-ezr-fx-rates?baseCurrency=USD&termCurrency=BDT",
-  "data": {
-    "rate": 119.50,
-    "timestamp": "2025-12-11T16:54:42.642Z"
-  }
-}
+### File Naming
+Files are organized by month: `data/conversion-rates-YYYY-MM.csv`
+
+Example: `data/conversion-rates-2025-12.csv`
+
+### Sample Data
+```csv
+datetime,baseCurrency,termCurrency,normalRate
+2025-12-13T09:51:49Z,USD,BDT,119.50
+2025-12-13T10:21:49Z,USD,BDT,119.52
+2025-12-13T10:51:49Z,USD,BDT,119.48
 ```
 
 ## API Documentation
@@ -105,16 +106,15 @@ The fetched data is saved to `conversion-rates.json` with the following structur
 - `baseCurrency`: The base currency code (e.g., USD, EUR)
 - `termCurrency`: The term currency code (e.g., BDT, GBP)
 
+**Response**: JSON object containing `normalRate` field
+
 ## Technologies Used
 
-- **Node.js**: Runtime environment (v20+)
+- **Bash**: Shell scripting for automation
+- **curl**: HTTP client for API requests
+- **jq**: JSON processor for parsing API responses
 - **GitHub Actions**: Automation platform
 - **iFAST GB API**: Data source
-
-## Notes
-
-- The requirement mentioned "Preferred language is React", but React is a UI library primarily used for frontend applications. This project is a backend automation task that doesn't require a UI, so it uses Node.js with native modules for optimal performance and minimal dependencies.
-- The script uses Node.js built-in `https` module for making API requests, ensuring zero external dependencies for production use.
 
 ## Troubleshooting
 
@@ -123,12 +123,10 @@ The fetched data is saved to `conversion-rates.json` with the following structur
 - Check that the workflow has write permissions for contents and pull-requests
 - Verify the API is accessible and returning valid data
 
-### Manual testing
-If you want to test the script locally but the API is not accessible:
-```bash
-# The script will fail if the API is unreachable
-npm run fetch
-```
+### Missing jq command
+If running locally and jq is not installed:
+- Ubuntu/Debian: `sudo apt-get install jq`
+- macOS: `brew install jq`
 
 ## License
 
