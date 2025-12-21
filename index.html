@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>iFastGB Conversion Rate Monitor</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js" crossorigin="anonymous"></script>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
@@ -190,8 +190,13 @@
 
         // Display chart with data
         function displayChart(data) {
-            // Filter out empty rows
-            const filteredData = data.filter(row => row.datetime && row.normalRate);
+            // Filter out empty rows and invalid rates (but keep rows with normalRate = 0)
+            const filteredData = data.filter(row => {
+                if (!row.datetime) return false;
+                if (row.normalRate === null || row.normalRate === undefined || row.normalRate === '') return false;
+                const rate = parseFloat(row.normalRate);
+                return !isNaN(rate);
+            });
             
             if (filteredData.length === 0) {
                 showError('No data available for the selected period.');
