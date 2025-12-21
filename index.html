@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>iFastGB Conversion Rate Monitor</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js" crossorigin="anonymous"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .controls {
+            margin: 20px 0;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        label {
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #555;
+        }
+        select {
+            padding: 8px 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+            min-width: 120px;
+        }
+        #chartContainer {
+            margin-top: 30px;
+            position: relative;
+            height: 400px;
+        }
+        #errorMessage {
+            color: #d32f2f;
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #ffebee;
+            border-radius: 4px;
+            display: none;
+        }
+        #loading {
+            margin-top: 20px;
+            color: #666;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>iFastGB Conversion Rate Monitor</h1>
+    
+    <div class="controls">
+        <div class="control-group">
+            <label for="yearSelect">Year:</label>
+            <select id="yearSelect"></select>
+        </div>
+        <div class="control-group">
+            <label for="monthSelect">Month:</label>
+            <select id="monthSelect"></select>
+        </div>
+    </div>
+    
+    <div id="loading">Loading data...</div>
+    <div id="errorMessage"></div>
+    
+    <div id="chartContainer">
+        <canvas id="chart"></canvas>
+    </div>
+
+    <script>
+        let chart = null;
+
+        // Initialize year and month selectors
+        function initializeSelectors() {
+            const yearSelect = document.getElementById('yearSelect');
+            const monthSelect = document.getElementById('monthSelect');
+            
+            // Populate years (2024-2026)
+            for (let year = 2024; year <= 2026; year++) {
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = year;
+                yearSelect.appendChild(option);
+            }
+            
+            // Populate months
+            const months = [
+                { value: '01', label: 'January' },
+                { value: '02', label: 'February' },
+                { value: '03', label: 'March' },
+                { value: '04', label: 'April' },
+                { value: '05', label: 'May' },
+                { value: '06', label: 'June' },
+                { value: '07', label: 'July' },
+                { value: '08', label: 'August' },
+                { value: '09', label: 'September' },
+                { value: '10', label: 'October' },
+                { value: '11', label: 'November' },
+                { value: '12', label: 'December' }
+            ];
+            
+            months.forEach(month => {
+                const option = document.createElement('option');
+                option.value = month.value;
+                option.textContent = month.label;
+                monthSelect.appendChild(option);
+            });
+            
+            // Set default to current year and month (2025-12)
+            yearSelect.value = '2025';
+            monthSelect.value = '12';
+            
+            // Add event listeners
+            yearSelect.addEventListener('change', loadData);
+            monthSelect.addEventListener('change', loadData);
+        }
+
+        // Show/hide elements
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            if (message) {
+                errorDiv.textContent = message;
+                errorDiv.style.display = 'block';
+            } else {
+                errorDiv.style.display = 'none';
+            }
+        }
+
+        // Load and display data
+        async function loadData() {
+            const year = document.getElementById('yearSelect').value;
+            const month = document.getElementById('monthSelect').value;
+            const filename = `data/conversion-rates-${year}-${month}.csv`;
+            
+            showLoading(true);
+            showError(null);
+            
+            try {
+                const response = await fetch(filename);
+                
+                if (!response.ok) {
+                    throw new Error(`Data file not found for ${year}-${month}. Please select a different period.`);
+                }
+                
+                const csvText = await response.text();
+                
+                Papa.parse(csvText, {
+                    header: true,
+                    dynamicTyping: true,
+                    skipEmptyLines: true,
+                    complete: function(results) {
+                        showLoading(false);
+                        
+                        if (results.errors.length > 0) {
+                            showError('Error parsing CSV data. Please try again.');
+                            return;
+                        }
+                        
+                        displayChart(results.data);
+                    },
+                    error: function(error) {
+                        showLoading(false);
+                        showError('Error parsing CSV data: ' + error.message);
+                    }
+                });
+            } catch (error) {
+                showLoading(false);
+                showError(error.message);
+            }
+        }
+
+        // Display chart with data
+        function displayChart(data) {
+            // Filter out empty rows and invalid rates (but keep rows with normalRate = 0)
+            const filteredData = data.filter(row => {
+                if (!row.datetime) return false;
+                if (row.normalRate === null || row.normalRate === undefined || row.normalRate === '') return false;
+                const rate = parseFloat(row.normalRate);
+                return !isNaN(rate);
+            });
+            
+            if (filteredData.length === 0) {
+                showError('No data available for the selected period.');
+                return;
+            }
+            
+            // Extract data for chart
+            const labels = filteredData.map(row => row.datetime);
+            const rates = filteredData.map(row => parseFloat(row.normalRate));
+            
+            // Get currency info from first row
+            const baseCurrency = filteredData[0].baseCurrency || 'USD';
+            const termCurrency = filteredData[0].termCurrency || 'BDT';
+            
+            // Destroy existing chart if it exists
+            if (chart) {
+                chart.destroy();
+            }
+            
+            // Create new chart
+            const ctx = document.getElementById('chart').getContext('2d');
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: `${baseCurrency}/${termCurrency} Rate`,
+                        data: rates,
+                        borderColor: 'rgb(75, 192, 192)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Datetime'
+                            },
+                            ticks: {
+                                maxTicksLimit: 10,
+                                maxRotation: 45,
+                                minRotation: 45,
+                                callback: function(value, index, ticks) {
+                                    const date = new Date(this.getLabelForValue(value));
+                                    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                                }
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Normal Rate'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        }
+                    }
+                }
+            });
+        }
+
+        // Initialize on page load
+        window.addEventListener('DOMContentLoaded', function() {
+            initializeSelectors();
+            loadData();
+        });
+    </script>
+</body>
+</html>
