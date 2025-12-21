@@ -167,6 +167,7 @@
                 Papa.parse(csvText, {
                     header: true,
                     dynamicTyping: true,
+                    skipEmptyLines: true,
                     complete: function(results) {
                         showLoading(false);
                         
@@ -204,7 +205,10 @@
             }
             
             // Extract data for chart
-            const labels = filteredData.map(row => row.datetime);
+            const labels = filteredData.map(row => {
+                const date = new Date(row.datetime);
+                return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            });
             const rates = filteredData.map(row => parseFloat(row.normalRate));
             
             // Get currency info from first row
