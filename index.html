@@ -205,10 +205,7 @@
             }
             
             // Extract data for chart
-            const labels = filteredData.map(row => {
-                const date = new Date(row.datetime);
-                return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-            });
+            const labels = filteredData.map(row => row.datetime);
             const rates = filteredData.map(row => parseFloat(row.normalRate));
             
             // Get currency info from first row
@@ -246,7 +243,11 @@
                             ticks: {
                                 maxTicksLimit: 10,
                                 maxRotation: 45,
-                                minRotation: 45
+                                minRotation: 45,
+                                callback: function(value, index, ticks) {
+                                    const date = new Date(this.getLabelForValue(value));
+                                    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                                }
                             }
                         },
                         y: {
