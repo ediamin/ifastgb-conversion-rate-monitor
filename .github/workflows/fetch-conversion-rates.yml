@@ -35,12 +35,38 @@ jobs:
         env:
           BASE_CURRENCY: ${{ github.event.inputs.baseCurrency || 'USD' }}
           TERM_CURRENCY: ${{ github.event.inputs.termCurrency || 'BDT' }}
-        run: bash fetch-rates.sh
+        run: |
+          echo "Fetching conversion rates..."
+          bash fetch-rates.sh
+          echo "✓ Fetch script completed"
+      
+      - name: Debug - Show repository status
+        run: |
+          echo "=== Git Status ==="
+          git status
+          echo ""
+          echo "=== Data Directory Contents ==="
+          ls -la data/
+          echo ""
+          echo "=== Git Diff ==="
+          git diff data/
+      
+      - name: Stage changes to data directory
+        run: |
+          echo "Staging changes in data/ directory..."
+          git add data/
+          echo "✓ Changes staged"
       
       - name: Check for changes
         id: git-check
         run: |
-          git diff --exit-code data/ || echo "changed=true" >> $GITHUB_OUTPUT
+          if git diff --cached --exit-code data/; then
+            echo "No changes detected"
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "Changes detected in data/ directory"
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
       
       - name: Create Pull Request
         if: steps.git-check.outputs.changed == 'true'
