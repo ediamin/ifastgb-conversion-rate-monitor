@@ -100,13 +100,16 @@
             // Generate list of available year-month combinations
             const availableDates = [];
             let date = new Date(startDate);
+            let safetyCounter = 0;
+            const maxIterations = 24; // Max 2 years worth of months
             
-            while (date <= currentDate) {
+            while (date <= currentDate && safetyCounter < maxIterations) {
                 availableDates.push({
                     year: date.getFullYear(),
                     month: String(date.getMonth() + 1).padStart(2, '0')
                 });
                 date.setMonth(date.getMonth() + 1);
+                safetyCounter++;
             }
             
             // Extract unique years
