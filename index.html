@@ -87,47 +87,85 @@
         let chart = null;
 
         // Initialize year and month selectors
-        function initializeSelectors() {
+        async function initializeSelectors() {
             const yearSelect = document.getElementById('yearSelect');
             const monthSelect = document.getElementById('monthSelect');
             
-            // Populate years (2024-2026)
-            for (let year = 2024; year <= 2026; year++) {
+            // Define the date range: from 2025-12 to current date (dynamic)
+            const startDate = new Date('2025-12-01');
+            const currentDate = new Date(); // Dynamic current date
+            
+            // Generate list of available year-month combinations
+            const availableDates = [];
+            let date = new Date(startDate);
+            
+            while (date <= currentDate) {
+                availableDates.push({
+                    year: date.getFullYear(),
+                    month: String(date.getMonth() + 1).padStart(2, '0')
+                });
+                date.setMonth(date.getMonth() + 1);
+            }
+            
+            // Extract unique years
+            const uniqueYears = [...new Set(availableDates.map(d => d.year))];
+            
+            // Populate years
+            uniqueYears.forEach(year => {
                 const option = document.createElement('option');
                 option.value = year;
                 option.textContent = year;
                 yearSelect.appendChild(option);
-            }
-            
-            // Populate months
-            const months = [
-                { value: '01', label: 'January' },
-                { value: '02', label: 'February' },
-                { value: '03', label: 'March' },
-                { value: '04', label: 'April' },
-                { value: '05', label: 'May' },
-                { value: '06', label: 'June' },
-                { value: '07', label: 'July' },
-                { value: '08', label: 'August' },
-                { value: '09', label: 'September' },
-                { value: '10', label: 'October' },
-                { value: '11', label: 'November' },
-                { value: '12', label: 'December' }
-            ];
-            
-            months.forEach(month => {
-                const option = document.createElement('option');
-                option.value = month.value;
-                option.textContent = month.label;
-                monthSelect.appendChild(option);
             });
             
-            // Set default to current year and month (2025-12)
-            yearSelect.value = '2025';
-            monthSelect.value = '12';
+            // Function to update month dropdown based on selected year
+            function updateMonthDropdown() {
+                const selectedYear = parseInt(yearSelect.value);
+                monthSelect.innerHTML = ''; // Clear existing options
+                
+                const monthNames = [
+                    'January', 'February', 'March', 'April', 'May', 'June',
+                    'July', 'August', 'September', 'October', 'November', 'December'
+                ];
+                
+                // Filter available months for selected year
+                const availableMonths = availableDates
+                    .filter(d => d.year === selectedYear)
+                    .map(d => ({
+                        value: d.month,
+                        label: monthNames[parseInt(d.month) - 1]
+                    }));
+                
+                availableMonths.forEach(month => {
+                    const option = document.createElement('option');
+                    option.value = month.value;
+                    option.textContent = month.label;
+                    monthSelect.appendChild(option);
+                });
+                
+                // Set to current month if available, otherwise first available month
+                const currentYear = currentDate.getFullYear();
+                const currentMonth = String(currentDate.getMonth() + 1).padStart(2, '0');
+                
+                if (selectedYear === currentYear && availableMonths.some(m => m.value === currentMonth)) {
+                    monthSelect.value = currentMonth;
+                } else {
+                    monthSelect.value = availableMonths[availableMonths.length - 1].value;
+                }
+            }
+            
+            // Set default to current year and month
+            const currentYear = currentDate.getFullYear();
+            const currentMonth = String(currentDate.getMonth() + 1).padStart(2, '0');
+            
+            yearSelect.value = currentYear;
+            updateMonthDropdown();
             
             // Add event listeners
-            yearSelect.addEventListener('change', loadData);
+            yearSelect.addEventListener('change', () => {
+                updateMonthDropdown();
+                loadData();
+            });
             monthSelect.addEventListener('change', loadData);
         }
 
