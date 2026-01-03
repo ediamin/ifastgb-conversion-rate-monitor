@@ -87,13 +87,15 @@
         let chart = null;
 
         // Initialize year and month selectors
-        async function initializeSelectors() {
+        function initializeSelectors() {
             const yearSelect = document.getElementById('yearSelect');
             const monthSelect = document.getElementById('monthSelect');
             
             // Define the date range: from 2025-12 to current date (dynamic)
             const startDate = new Date('2025-12-01');
             const currentDate = new Date(); // Dynamic current date
+            const currentYear = currentDate.getFullYear();
+            const currentMonth = String(currentDate.getMonth() + 1).padStart(2, '0');
             
             // Generate list of available year-month combinations
             const availableDates = [];
@@ -143,21 +145,17 @@
                     monthSelect.appendChild(option);
                 });
                 
-                // Set to current month if available, otherwise first available month
-                const currentYear = currentDate.getFullYear();
-                const currentMonth = String(currentDate.getMonth() + 1).padStart(2, '0');
-                
-                if (selectedYear === currentYear && availableMonths.some(m => m.value === currentMonth)) {
-                    monthSelect.value = currentMonth;
-                } else {
-                    monthSelect.value = availableMonths[availableMonths.length - 1].value;
+                // Set to current month if available, otherwise last available month
+                if (availableMonths.length > 0) {
+                    if (selectedYear === currentYear && availableMonths.some(m => m.value === currentMonth)) {
+                        monthSelect.value = currentMonth;
+                    } else {
+                        monthSelect.value = availableMonths[availableMonths.length - 1].value;
+                    }
                 }
             }
             
             // Set default to current year and month
-            const currentYear = currentDate.getFullYear();
-            const currentMonth = String(currentDate.getMonth() + 1).padStart(2, '0');
-            
             yearSelect.value = currentYear;
             updateMonthDropdown();
             
