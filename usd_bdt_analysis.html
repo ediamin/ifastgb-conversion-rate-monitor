@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>USD → BDT Exchange Rate Analysis | iFastGB</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --green: #10b981;
+      --red: #ef4444;
+      --blue: #3b82f6;
+      --purple: #8b5cf6;
+      --orange: #f59e0b;
+      --bg: #0f172a;
+      --card: #1e293b;
+      --card2: #263045;
+      --border: #334155;
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; }
+    
+    header { background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0f172a 100%); padding: 40px 32px 32px; border-bottom: 1px solid var(--border); }
+    header .badge { display: inline-block; background: rgba(59,130,246,0.15); color: #60a5fa; border: 1px solid rgba(59,130,246,0.3); border-radius: 20px; padding: 4px 14px; font-size: 12px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 12px; }
+    header h1 { font-size: 2rem; font-weight: 800; margin-bottom: 6px; }
+    header h1 span { color: #60a5fa; }
+    header p { color: var(--muted); font-size: 0.95rem; }
+    
+    .container { max-width: 1400px; margin: 0 auto; padding: 32px; }
+    
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 32px; }
+    .stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+    .stat-card .label { font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+    .stat-card .value { font-size: 1.8rem; font-weight: 800; }
+    .stat-card .sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+    .stat-card.green .value { color: var(--green); }
+    .stat-card.blue .value { color: #60a5fa; }
+    .stat-card.orange .value { color: var(--orange); }
+    .stat-card.purple .value { color: #a78bfa; }
+    .stat-card.red .value { color: var(--red); }
+    
+    .section { margin-bottom: 36px; }
+    .section-title { font-size: 1.1rem; font-weight: 700; color: var(--text); margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
+    .section-title .icon { font-size: 1.2rem; }
+    .section-sub { font-size: 13px; color: var(--muted); margin-bottom: 16px; }
+    
+    .chart-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; }
+    .chart-card.full { width: 100%; }
+    
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+    
+    canvas { max-height: 320px; }
+    canvas.tall { max-height: 400px; }
+    canvas.short { max-height: 200px; }
+    
+    .insight-box { background: linear-gradient(135deg, rgba(16,185,129,0.1), rgba(59,130,246,0.08)); border: 1px solid rgba(16,185,129,0.25); border-radius: 12px; padding: 20px 24px; margin-bottom: 20px; }
+    .insight-box h3 { font-size: 1rem; font-weight: 700; color: var(--green); margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+    .insight-box ul { list-style: none; padding: 0; }
+    .insight-box ul li { font-size: 0.9rem; color: var(--text); padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.06); display: flex; align-items: flex-start; gap: 10px; }
+    .insight-box ul li:last-child { border-bottom: none; }
+    .insight-box ul li .bullet { color: var(--green); font-weight: 800; flex-shrink: 0; }
+    
+    .phase-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+    .phase-card { border-radius: 12px; padding: 18px; border: 1px solid; }
+    .phase-card.stable { background: rgba(59,130,246,0.08); border-color: rgba(59,130,246,0.3); }
+    .phase-card.dip { background: rgba(239,68,68,0.08); border-color: rgba(239,68,68,0.3); }
+    .phase-card.surge { background: rgba(16,185,129,0.08); border-color: rgba(16,185,129,0.3); }
+    .phase-card h4 { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+    .phase-card.stable h4 { color: #60a5fa; }
+    .phase-card.dip h4 { color: #f87171; }
+    .phase-card.surge h4 { color: var(--green); }
+    .phase-card .dates { font-size: 11px; color: var(--muted); margin-bottom: 10px; }
+    .phase-card .avg { font-size: 1.6rem; font-weight: 800; }
+    .phase-card.stable .avg { color: #60a5fa; }
+    .phase-card.dip .avg { color: #f87171; }
+    .phase-card.surge .avg { color: var(--green); }
+    .phase-card .range { font-size: 11px; color: var(--muted); margin-top: 4px; }
+    .phase-card .verdict { margin-top: 10px; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 20px; display: inline-block; }
+    .phase-card.stable .verdict { background: rgba(59,130,246,0.15); color: #60a5fa; }
+    .phase-card.dip .verdict { background: rgba(239,68,68,0.15); color: #f87171; }
+    .phase-card.surge .verdict { background: rgba(16,185,129,0.15); color: var(--green); }
+
+    .rec-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; }
+    .rec-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+    .rec-item { display: flex; align-items: flex-start; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+    .rec-item:last-child { border-bottom: none; }
+    .rec-num { background: linear-gradient(135deg, #3b82f6, #8b5cf6); color: white; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex-shrink: 0; }
+    .rec-item .text { font-size: 0.9rem; color: var(--text); }
+    .rec-item .text strong { color: var(--green); }
+    .rec-item .text .note { font-size: 11px; color: var(--muted); margin-top: 3px; }
+    
+    footer { text-align: center; padding: 32px; color: var(--muted); font-size: 12px; border-top: 1px solid var(--border); margin-top: 20px; }
+    
+    @media (max-width: 900px) {
+      .two-col, .three-col, .phase-cards { grid-template-columns: 1fr; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="container" style="padding: 0">
+    <div class="badge">iFastGB · Data Analysis</div>
+    <h1>USD <span>→</span> BDT Exchange Rate Analysis</h1>
+    <p>Dec 13, 2025 – Apr 3, 2026 &nbsp;·&nbsp; 3,338 data points &nbsp;·&nbsp; Source: iFastGB SCB EZR FX Rates API</p>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- Key Stats -->
+  <div class="stats-grid" style="margin-top: 28px;">
+    <div class="stat-card blue">
+      <div class="label">Current Rate</div>
+      <div class="value">122.34</div>
+      <div class="sub">BDT per 1 USD (Apr 3, 2026)</div>
+    </div>
+    <div class="stat-card green">
+      <div class="label">All-Time High</div>
+      <div class="value">122.3552</div>
+      <div class="sub">Mar 31 – Apr 2, 2026</div>
+    </div>
+    <div class="stat-card red">
+      <div class="label">All-Time Low</div>
+      <div class="value">121.589</div>
+      <div class="sub">Feb 17–18, 2026</div>
+    </div>
+    <div class="stat-card orange">
+      <div class="label">Rate Range</div>
+      <div class="value">0.766</div>
+      <div class="sub">BDT spread across dataset</div>
+    </div>
+    <div class="stat-card purple">
+      <div class="label">Gain per $1,000</div>
+      <div class="value">৳766</div>
+      <div class="sub">Best vs worst timing</div>
+    </div>
+    <div class="stat-card green">
+      <div class="label">Trend</div>
+      <div class="value">↑ Rising</div>
+      <div class="sub">+0.0047 BDT/day avg slope</div>
+    </div>
+  </div>
+
+  <!-- Insight Box -->
+  <div class="insight-box">
+    <h3>🎯 Key Findings at a Glance</h3>
+    <ul>
+      <li><span class="bullet">→</span> <strong>NOW is one of the best times to withdraw.</strong> The USD/BDT rate is near its all-time high of 122.355 — up 0.66 BDT/USD since December 2025. The trend is strongly upward.</li>
+      <li><span class="bullet">→</span> A <strong>major regime shift</strong> occurred on March 12, 2026 when rates jumped ~0.48 BDT in one day, establishing a new high plateau around 122.18–122.36.</li>
+      <li><span class="bullet">→</span> <strong>Wednesday and Tuesday</strong> (in recent weeks) show the highest average rates. Monday is the weakest day of the week for withdrawals.</li>
+      <li><span class="bullet">→</span> <strong>8:00–9:00 AM BDT</strong> (2:00–3:00 UTC) shows the highest intra-day mean rate in the recent high-rate period.</li>
+      <li><span class="bullet">→</span> <strong>Avoid Feb 16–Mar 11</strong> window historically — rates dipped as low as 121.589, which would have cost you ৳766 per $1,000 compared to current levels.</li>
+    </ul>
+  </div>
+
+  <!-- Main Timeline Chart -->
+  <div class="section">
+    <div class="section-title"><span class="icon">📈</span> Full Rate Timeline (Dec 2025 – Apr 2026)</div>
+    <div class="section-sub">Daily average, max, and min rates. Note the sharp surge in mid-March 2026.</div>
+    <div class="chart-card full">
+      <canvas id="timelineChart" class="tall"></canvas>
+    </div>
+  </div>
+
+  <!-- Phase Analysis -->
+  <div class="section">
+    <div class="section-title"><span class="icon">🔍</span> Rate Regime Analysis</div>
+    <div class="section-sub">Three distinct phases are visible in the data.</div>
+    <div class="phase-cards">
+      <div class="phase-card stable">
+        <h4>Phase 1 · Stable</h4>
+        <div class="dates">Dec 13, 2025 – Feb 15, 2026</div>
+        <div class="avg">121.696</div>
+        <div class="range">Range: 121.659 – 121.718</div>
+        <div class="verdict">Neutral — Steady</div>
+      </div>
+      <div class="phase-card dip">
+        <h4>Phase 2 · Dip</h4>
+        <div class="dates">Feb 16 – Mar 11, 2026</div>
+        <div class="avg">121.704</div>
+        <div class="range">Range: 121.589 – 121.808</div>
+        <div class="verdict">⚠ Worst Period</div>
+      </div>
+      <div class="phase-card surge">
+        <h4>Phase 3 · Surge 🚀</h4>
+        <div class="dates">Mar 12 – Apr 3, 2026</div>
+        <div class="avg">122.285</div>
+        <div class="range">Range: 121.808 – 122.355</div>
+        <div class="verdict">✓ Best Period</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Two column charts -->
+  <div class="section two-col">
+    <div>
+      <div class="section-title"><span class="icon">📅</span> Weekly Rate Trend</div>
+      <div class="section-sub">Rate by calendar week — steep acceleration from Week 10 onward.</div>
+      <div class="chart-card">
+        <canvas id="weeklyChart"></canvas>
+      </div>
+    </div>
+    <div>
+      <div class="section-title"><span class="icon">📊</span> Rate Distribution</div>
+      <div class="section-sub">Histogram of all observed rates. Bimodal pattern: pre/post March surge.</div>
+      <div class="chart-card">
+        <canvas id="distChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Day of week + Hourly -->
+  <div class="section two-col">
+    <div>
+      <div class="section-title"><span class="icon">🗓</span> Best Day of Week (Recent Data)</div>
+      <div class="section-sub">Average rate by day — Wed/Tue/Fri lead in the March–April high period.</div>
+      <div class="chart-card">
+        <canvas id="dowChart"></canvas>
+      </div>
+    </div>
+    <div>
+      <div class="section-title"><span class="icon">🕐</span> Best Hour of Day (BDT)</div>
+      <div class="section-sub">Intra-day mean rates in BDT timezone (UTC+6). 8–9 AM BDT shows best rates.</div>
+      <div class="chart-card">
+        <canvas id="hourlyChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recommendations -->
+  <div class="section">
+    <div class="section-title"><span class="icon">💡</span> Withdrawal Recommendations</div>
+    <div class="section-sub">Actionable guidance based on the data analysis.</div>
+    <div class="rec-card">
+      <h3>🏦 When to Withdraw Your USD to Bangladeshi Bank</h3>
+      <div class="rec-item">
+        <div class="rec-num">1</div>
+        <div class="text">
+          <strong>Withdraw NOW or soon</strong> — rates are near all-time highs (122.33–122.36 BDT/USD). You are currently in the best rate environment in this entire dataset. The uptrend is still intact.
+          <div class="note">Per $1,000: you receive ৳122,335 vs ৳121,589 at the Feb 2026 low — a difference of ৳766.</div>
+        </div>
+      </div>
+      <div class="rec-item">
+        <div class="rec-num">2</div>
+        <div class="text">
+          <strong>Target Wednesdays and Tuesdays</strong> — these days show the highest average rates in the recent high-rate period (Mar–Apr 2026): Wed avg 122.314, Tue avg 122.308. Monday is the weakest day.
+          <div class="note">The difference is small (≈0.07 BDT) but worth noting for larger transfers.</div>
+        </div>
+      </div>
+      <div class="rec-item">
+        <div class="rec-num">3</div>
+        <div class="text">
+          <strong>Withdraw in the morning (8–9 AM BDT)</strong> — 8:00 AM Bangladesh time (02:00 UTC) shows the highest intra-day mean rate of 122.302. Avoid late evening Bangladesh time if possible.
+          <div class="note">Intra-day spread is small (&lt;0.05 BDT), so this is secondary to day/week timing.</div>
+        </div>
+      </div>
+      <div class="rec-item">
+        <div class="rec-num">4</div>
+        <div class="text">
+          <strong>Avoid withdrawing during rate dips</strong> — the Feb 16 – Mar 11, 2026 period saw rates drop sharply to 121.589. Watch for similar consolidation/dip patterns; if rates drop below 122.00, wait for recovery.
+          <div class="note">The March 12 surge (+0.48 BDT in a single day) shows how quickly rates can recover and overshoot.</div>
+        </div>
+      </div>
+      <div class="rec-item">
+        <div class="rec-num">5</div>
+        <div class="text">
+          <strong>Monitor the trend weekly</strong> — the overall slope is +0.0047 BDT/day. If the uptrend continues, holding USD a bit longer could yield more. But given we're at peak levels, consider locking in now if you need BDT soon.
+          <div class="note">The rate increased by +0.59 BDT/USD (from 121.77 to 122.36) in just the last 3 weeks of March 2026.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  Analysis based on iFastGB SCB EZR FX Rates data &nbsp;·&nbsp; 3,338 records &nbsp;·&nbsp; Dec 13, 2025 – Apr 3, 2026 &nbsp;·&nbsp; All times in UTC / BDT (UTC+6)
+</footer>
+
+<script>
+const TIMELINE = {"labels": ["2025-12-13", "2025-12-14", "2025-12-15", "2025-12-16", "2025-12-17", "2025-12-18", "2025-12-19", "2025-12-20", "2025-12-21", "2025-12-22", "2025-12-23", "2025-12-24", "2025-12-25", "2025-12-26", "2025-12-27", "2025-12-28", "2025-12-29", "2025-12-30", "2025-12-31", "2026-01-02", "2026-01-03", "2026-01-04", "2026-01-05", "2026-01-06", "2026-01-07", "2026-01-08", "2026-01-09", "2026-01-10", "2026-01-11", "2026-01-12", "2026-01-13", "2026-01-14", "2026-01-15", "2026-01-16", "2026-01-17", "2026-01-18", "2026-01-19", "2026-01-20", "2026-01-21", "2026-01-22", "2026-01-23", "2026-01-24", "2026-01-25", "2026-01-26", "2026-01-27", "2026-01-28", "2026-01-29", "2026-01-30", "2026-01-31", "2026-02-01", "2026-02-02", "2026-02-03", "2026-02-04", "2026-02-05", "2026-02-06", "2026-02-07", "2026-02-08", "2026-02-09", "2026-02-10", "2026-02-11", "2026-02-12", "2026-02-13", "2026-02-14", "2026-02-15", "2026-02-16", "2026-02-17", "2026-02-18", "2026-02-19", "2026-02-20", "2026-02-21", "2026-02-22", "2026-02-23", "2026-02-24", "2026-02-25", "2026-02-26", "2026-02-27", "2026-02-28", "2026-03-01", "2026-03-02", "2026-03-03", "2026-03-04", "2026-03-05", "2026-03-06", "2026-03-07", "2026-03-08", "2026-03-09", "2026-03-10", "2026-03-11", "2026-03-12", "2026-03-13", "2026-03-14", "2026-03-15", "2026-03-16", "2026-03-17", "2026-03-18", "2026-03-19", "2026-03-20", "2026-03-21", "2026-03-22", "2026-03-23", "2026-03-24", "2026-03-25", "2026-03-26", "2026-03-27", "2026-03-28", "2026-03-29", "2026-03-30", "2026-03-31", "2026-04-01", "2026-04-02", "2026-04-03"], "mean": [121.6736, 121.6736, 121.6736, 121.6736, 121.6845, 121.6851, 121.6786, 121.6786, 121.6786, 121.6786, 121.684, 121.6938, 121.6984, 121.6985, 121.6984, 121.6985, 121.6948, 121.6935, 121.6935, 121.6885, 121.6885, 121.6885, 121.6885, 121.6885, 121.6885, 121.6885, 121.6885, 121.6885, 121.6885, 121.6885, 121.6885, 121.6885, 121.6926, 121.6935, 121.6935, 121.6935, 121.6935, 121.7031, 121.7034, 121.7034, 121.7034, 121.7114, 121.7184, 121.7183, 121.7183, 121.7184, 121.7184, 121.7184, 121.7184, 121.707, 121.6968, 121.7026, 121.7084, 121.7084, 121.7084, 121.7084, 121.7084, 121.7084, 121.7084, 121.7084, 121.7084, 121.7084, 121.7084, 121.6895, 121.6634, 121.639, 121.6098, 121.6188, 121.6188, 121.6188, 121.6188, 121.6188, 121.6615, 121.6845, 121.6932, 121.7029, 121.7034, 121.7034, 121.7034, 121.7034, 121.7237, 121.7582, 121.778, 121.7845, 121.8079, 121.8079, 121.8079, 121.8079, 122.0778, 122.2855, 122.2855, 122.255, 122.2236, 122.2635, 122.2855, 122.2855, 122.2855, 122.2855, 122.2855, 122.2855, 122.3159, 122.3064, 122.3297, 122.3353, 122.3353, 122.2763, 122.223, 122.3505, 122.3551, 122.3436, 122.3353], "max": [121.6736, 121.6736, 121.6736, 121.6736, 121.6935, 121.6935, 121.6786, 121.6786, 121.6786, 121.6786, 121.6885, 121.6984, 121.6984, 121.6984, 121.6984, 121.6984, 121.6984, 121.6935, 121.6935, 121.6885, 121.6885, 121.6885, 121.6885, 121.6885, 121.6885, 121.6885, 121.6885, 121.6885, 121.6885, 121.6885, 121.6885, 121.6885, 121.6935, 121.6935, 121.6935, 121.6935, 121.6935, 121.7034, 121.7034, 121.7034, 121.7034, 121.7184, 121.7184, 121.7184, 121.7184, 121.7184, 121.7184, 121.7184, 121.7184, 121.7184, 121.7034, 121.7084, 121.7084, 121.7084, 121.7084, 121.7084, 121.7084, 121.7084, 121.7084, 121.7084, 121.7084, 121.7084, 121.7084, 121.7084, 121.6885, 121.6736, 121.6686, 121.6188, 121.6188, 121.6188, 121.6188, 121.6188, 121.6686, 121.6885, 121.7034, 121.7034, 121.7034, 121.7034, 121.7034, 121.7034, 121.7382, 121.778, 121.778, 121.8079, 121.8079, 121.8079, 121.8079, 121.8079, 122.2855, 122.2855, 122.2855, 122.2855, 122.2357, 122.2855, 122.2855, 122.2855, 122.2855, 122.2855, 122.2855, 122.2855, 122.3353, 122.3353, 122.3353, 122.3353, 122.3353, 122.3353, 122.3153, 122.3551, 122.3551, 122.3551, 122.3353], "min": [121.6736, 121.6736, 121.6736, 121.6736, 121.6736, 121.6786, 121.6786, 121.6786, 121.6786, 121.6786, 121.6786, 121.6885, 121.6984, 121.6984, 121.6984, 121.6984, 121.6935, 121.6935, 121.6935, 121.6885, 121.6885, 121.6885, 121.6885, 121.6885, 121.6885, 121.6885, 121.6885, 121.6885, 121.6885, 121.6885, 121.6885, 121.6885, 121.6885, 121.6935, 121.6935, 121.6935, 121.6935, 121.6935, 121.7034, 121.7034, 121.7034, 121.7034, 121.7184, 121.7184, 121.7184, 121.7184, 121.7184, 121.7184, 121.7184, 121.7034, 121.6935, 121.6935, 121.7084, 121.7084, 121.7084, 121.7084, 121.7084, 121.7084, 121.7084, 121.7084, 121.7084, 121.7084, 121.7084, 121.6586, 121.6188, 121.589, 121.589, 121.6188, 121.6188, 121.6188, 121.6188, 121.6188, 121.6188, 121.6686, 121.6885, 121.6885, 121.7034, 121.7034, 121.7034, 121.7034, 121.7034, 121.7382, 121.778, 121.778, 121.8079, 121.8079, 121.8079, 121.8079, 121.8079, 122.2855, 122.2855, 122.2357, 122.2159, 122.2159, 122.2855, 122.2855, 122.2855, 122.2855, 122.2855, 122.2855, 122.2855, 122.2855, 122.2855, 122.3353, 122.3353, 122.186, 122.186, 122.3153, 122.3551, 122.3353, 122.3353]};
+const DOW = {"labels": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"], "values": [121.7596, 121.7707, 121.7747, 121.8077, 121.8076, 121.794, 121.7865]};
+const PHASE = {"labels": ["Dec 13 - Feb 15\n(Stable)", "Feb 16 - Mar 11\n(Dip)", "Mar 12 - Apr 3\n(Surge)"], "avg": [121.6956, 121.7037, 122.2851], "min": [121.6586, 121.589, 121.8079], "max": [121.7184, 121.8079, 122.3551]};
+const WEEKLY = {"labels": ["2025-W01", "2025-W50", "2025-W51", "2025-W52", "2026-W01", "2026-W02", "2026-W03", "2026-W04", "2026-W05", "2026-W06", "2026-W07", "2026-W08", "2026-W09", "2026-W10", "2026-W11", "2026-W12", "2026-W13", "2026-W14"], "values": [121.6939, 121.6736, 121.6789, 121.693, 121.6885, 121.6885, 121.6913, 121.7056, 121.7167, 121.7065, 121.7048, 121.6262, 121.6858, 121.757, 122.0701, 122.276, 122.3119, 122.3251]};
+const HOURLY = {"labels": ["06:00 BDT", "07:00 BDT", "08:00 BDT", "09:00 BDT", "10:00 BDT", "11:00 BDT", "12:00 BDT", "13:00 BDT", "14:00 BDT", "15:00 BDT", "16:00 BDT", "17:00 BDT", "18:00 BDT", "19:00 BDT", "20:00 BDT", "21:00 BDT", "22:00 BDT", "23:00 BDT", "00:00 BDT", "01:00 BDT", "02:00 BDT", "03:00 BDT", "04:00 BDT", "05:00 BDT"], "values": [null, 122.2882, 122.3024, null, 122.2755, 122.2503, 122.2812, 122.2755, 122.2764, 122.2805, 122.2821, 122.2638, 122.2743, 122.2902, 122.2929, 122.2988, 122.2929, 122.2938, 122.2993, 122.2845, 122.2944, 122.2889, 122.2935, 122.287]};
+const DIST = {"labels": ["121.58", "121.63", "121.68", "121.73", "121.78", "121.83", "121.88", "121.93", "121.98", "122.03", "122.08", "122.13", "122.18", "122.23", "122.28", "122.33"], "values": [179, 400, 2054, 87, 125, 0, 0, 0, 0, 0, 0, 0, 35, 26, 282, 150]};
+const STATS = {"total_records": 3338, "date_from": "2025-12-13", "date_to": "2026-04-03", "overall_avg": 121.7859, "overall_min": 121.589, "overall_max": 122.3552, "current_rate": 122.3352, "rate_range": 0.7661, "gain_per_1000": 766.15, "trend_slope_per_day": 0.004722, "phase3_avg": 122.2851, "phase1_avg": 121.6956};
+
+Chart.defaults.color = '#94a3b8';
+Chart.defaults.font.family = "'Segoe UI', system-ui, sans-serif";
+Chart.defaults.font.size = 11;
+
+const gridOpts = {
+  color: 'rgba(148,163,184,0.1)',
+  borderColor: 'rgba(148,163,184,0.15)'
+};
+
+// 1. Timeline Chart
+const timelineCtx = document.getElementById('timelineChart').getContext('2d');
+new Chart(timelineCtx, {
+  type: 'line',
+  data: {
+    labels: TIMELINE.labels,
+    datasets: [
+      {
+        label: 'Daily Average',
+        data: TIMELINE.mean,
+        borderColor: '#3b82f6',
+        backgroundColor: 'rgba(59,130,246,0.08)',
+        borderWidth: 2,
+        pointRadius: 0,
+        fill: true,
+        tension: 0.3,
+        order: 1
+      },
+      {
+        label: 'Daily High',
+        data: TIMELINE.max,
+        borderColor: 'rgba(16,185,129,0.5)',
+        borderWidth: 1,
+        pointRadius: 0,
+        fill: false,
+        tension: 0.3,
+        borderDash: [4,2],
+        order: 2
+      },
+      {
+        label: 'Daily Low',
+        data: TIMELINE.min,
+        borderColor: 'rgba(239,68,68,0.5)',
+        borderWidth: 1,
+        pointRadius: 0,
+        fill: false,
+        tension: 0.3,
+        borderDash: [4,2],
+        order: 3
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: true,
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: { position: 'top', labels: { boxWidth: 12, padding: 16 } },
+      tooltip: {
+        backgroundColor: '#1e293b',
+        borderColor: '#334155',
+        borderWidth: 1,
+        callbacks: {
+          label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y.toFixed(4)} BDT`
+        }
+      },
+      annotation: {}
+    },
+    scales: {
+      x: {
+        grid: gridOpts,
+        ticks: {
+          maxTicksLimit: 12,
+          maxRotation: 45
+        }
+      },
+      y: {
+        grid: gridOpts,
+        min: 121.5,
+        max: 122.45,
+        ticks: {
+          callback: v => v.toFixed(2)
+        }
+      }
+    }
+  }
+});
+
+// 2. Weekly Chart
+const weeklyCtx = document.getElementById('weeklyChart').getContext('2d');
+const weeklyColors = WEEKLY.values.map(v => v >= 122.0 ? 'rgba(16,185,129,0.8)' : v >= 121.75 ? 'rgba(59,130,246,0.7)' : 'rgba(148,163,184,0.5)');
+new Chart(weeklyCtx, {
+  type: 'bar',
+  data: {
+    labels: WEEKLY.labels,
+    datasets: [{
+      label: 'Weekly Avg Rate',
+      data: WEEKLY.values,
+      backgroundColor: weeklyColors,
+      borderRadius: 4
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#1e293b',
+        borderColor: '#334155',
+        borderWidth: 1,
+        callbacks: {
+          label: ctx => ` ${ctx.parsed.y.toFixed(4)} BDT`
+        }
+      }
+    },
+    scales: {
+      x: { grid: gridOpts, ticks: { maxRotation: 60, font: { size: 10 } } },
+      y: {
+        grid: gridOpts,
+        min: 121.55,
+        ticks: { callback: v => v.toFixed(2) }
+      }
+    }
+  }
+});
+
+// 3. Distribution Chart
+const distCtx = document.getElementById('distChart').getContext('2d');
+const distColors = DIST.labels.map(l => parseFloat(l) >= 122.0 ? 'rgba(16,185,129,0.8)' : parseFloat(l) >= 121.7 ? 'rgba(59,130,246,0.6)' : 'rgba(239,68,68,0.6)');
+new Chart(distCtx, {
+  type: 'bar',
+  data: {
+    labels: DIST.labels,
+    datasets: [{
+      label: 'Records',
+      data: DIST.values,
+      backgroundColor: distColors,
+      borderRadius: 3
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#1e293b',
+        borderColor: '#334155',
+        borderWidth: 1,
+        callbacks: {
+          title: ctx => `Rate ≥ ${ctx[0].label} BDT`,
+          label: ctx => ` ${ctx.parsed.y} data points`
+        }
+      }
+    },
+    scales: {
+      x: { grid: gridOpts, ticks: { maxRotation: 60, font: { size: 10 } } },
+      y: { grid: gridOpts }
+    }
+  }
+});
+
+// 4. Day of Week Chart (recent data)
+const dowCtx = document.getElementById('dowChart').getContext('2d');
+const recentDowValues = [122.247, 122.308, 122.314, 122.250, 122.306, 122.301, 122.272];
+const recentDowLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const dowColors = recentDowValues.map(v => v === Math.max(...recentDowValues) ? 'rgba(16,185,129,0.9)' : v === Math.min(...recentDowValues) ? 'rgba(239,68,68,0.7)' : 'rgba(59,130,246,0.65)');
+new Chart(dowCtx, {
+  type: 'bar',
+  data: {
+    labels: recentDowLabels,
+    datasets: [{
+      label: 'Avg Rate (Mar–Apr)',
+      data: recentDowValues,
+      backgroundColor: dowColors,
+      borderRadius: 6
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#1e293b',
+        borderColor: '#334155',
+        borderWidth: 1,
+        callbacks: {
+          label: ctx => ` ${ctx.parsed.y.toFixed(4)} BDT`
+        }
+      }
+    },
+    scales: {
+      x: { grid: gridOpts },
+      y: {
+        grid: gridOpts,
+        min: 122.20,
+        ticks: { callback: v => v.toFixed(3) }
+      }
+    }
+  }
+});
+
+// 5. Hourly Chart
+const hourlyCtx = document.getElementById('hourlyChart').getContext('2d');
+const hourlyColors = HOURLY.values.map(v => v === null ? 'rgba(148,163,184,0.3)' : v >= 122.295 ? 'rgba(16,185,129,0.9)' : v >= 122.285 ? 'rgba(59,130,246,0.7)' : 'rgba(148,163,184,0.5)');
+new Chart(hourlyCtx, {
+  type: 'bar',
+  data: {
+    labels: HOURLY.labels,
+    datasets: [{
+      label: 'Avg Rate (Mar–Apr)',
+      data: HOURLY.values,
+      backgroundColor: hourlyColors,
+      borderRadius: 4
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#1e293b',
+        borderColor: '#334155',
+        borderWidth: 1,
+        callbacks: {
+          label: ctx => ctx.parsed.y ? ` ${ctx.parsed.y.toFixed(4)} BDT` : ' No data'
+        }
+      }
+    },
+    scales: {
+      x: { grid: gridOpts, ticks: { maxRotation: 60, font: { size: 9 } } },
+      y: {
+        grid: gridOpts,
+        min: 122.22,
+        ticks: { callback: v => v.toFixed(3) }
+      }
+    }
+  }
+});
+</script>
+</body>
+</html>
